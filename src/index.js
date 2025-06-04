@@ -24,3 +24,10 @@ app.get('/books', async(req, res) => {
     const books = await Book.find();
     res.json(books);
 });
+
+// POST /books: Add a new book
+app.post('/books', async(req,res) =>{
+    const newBook = Book(req.body);
+    await newBook.save()
+    res.status(201).json(newBook);
+});
