@@ -1,52 +1,54 @@
-require('dotenv').config()
+require('dotenv').config(); // Load environment variables from .env
 
 const express = require('express');
 const mongoose = require('mongoose');
-const Book = require('./models/Book')
+const Book = require('./models/Book');
 
-// create an express app
+const app = express();
 
-const app = express()
-
-// Allows Express to understand JSON sent in HTTP request bodies (like when you POST a new book).
+// Allows Express to parse JSON in the request body
 app.use(express.json());
 
 // Connect to MongoDB
-
 mongoose.connect(process.env.MONGO_URI)
-.then(() => console.log(console.log('MongoDB connected')))
-.catch(err => console.error(err));
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error(err));
 
-// When a user visits /books, fetch all books from MongoDB.
-// res.json(books) sends them back as JSON.
-
-app.get('/books', async(req, res) => {
-    const books = await Book.find();
-    res.json(books);
+// GET /books – Get all books
+app.get('/books', async (req, res) => {
+  const books = await Book.find();
+  res.json(books);
 });
 
-// POST /books: Add a new book
-app.post('/books', async(req,res) =>{
-    const newBook = Book(req.body);
-    await newBook.save()
-    res.status(201).json(newBook);
+// POST /books – Add a new book
+app.post('/books', async (req, res) => {
+  const newBook = new Book(req.body); // You forgot `new` here
+  await newBook.save();
+  res.status(201).json(newBook);
 });
 
-// GET /books/:id: Get a book by ID
-
-app.get('/books:id',async(req,res) =>{
-    const book = Book.findById(req.params.id);
-    await Book.find(id);
+// GET /books/:id – Get a book by ID
+app.get('/books/:id', async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id); // await was missing
+    if (!book) return res.status(404).json({ error: 'Book not found' });
     res.json(book);
-
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
 });
-// DELETE /books/:id: Delete a book
 
-app.delete('/books:id', async(req, res) =>{
-    await Book.findByIdAndDelete(req.params.id); 
-    res.json({message:"Book Deleted"});
+// DELETE /books/:id – Delete a book by ID
+app.delete('/books/:id', async (req, res) => {
+  try {
+    await Book.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Book deleted' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete book' });
+  }
 });
-//Tells Express to start listening for incoming requests on a port defined in .env (like 3000).
-app.listen(process.env.PORT, () =>{
-    console.log('Server running on port ${process.env.PORT}')
-})
+
+// Start the server
+app.listen(process.env.PORT, () => {
+  console.log(`Server running on port ${process.env.PORT}`); // Use backticks here
+});
