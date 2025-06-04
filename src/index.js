@@ -2,9 +2,15 @@ require('dotenv').config(); // Load environment variables from .env
 
 const express = require('express');
 const mongoose = require('mongoose');
-const Book = require('./models/Book');
+const Book = require('../models/Book');
+const path = require('path');
+const { body, validationResult } = require('express-validator');
 
 const app = express();
+
+//Serve Static Files from Express
+
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Allows Express to parse JSON in the request body
 app.use(express.json());
@@ -21,11 +27,27 @@ app.get('/books', async (req, res) => {
 });
 
 // POST /books – Add a new book
-app.post('/books', async (req, res) => {
-  const newBook = new Book(req.body); // You forgot `new` here
-  await newBook.save();
-  res.status(201).json(newBook);
-});
+app.post('/books',
+    [
+      body('title').notEmpty().withMessage('Title is required'),
+      body('author').notEmpty().withMessage('Author is required'),
+      body('year').isInt({ min: 0, max: 2025 }).withMessage('Year must be a number between 0 and 2025')
+    ],
+    async (req, res) => {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+  
+      try {
+        const newBook = new Book(req.body);
+        await newBook.save();
+        res.status(201).json(newBook);
+      } catch (err) {
+        res.status(500).json({ error: 'Failed to save book' });
+      }
+    }
+  );
 
 // GET /books/:id – Get a book by ID
 app.get('/books/:id', async (req, res) => {
